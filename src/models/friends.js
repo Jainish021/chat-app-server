@@ -9,6 +9,7 @@ const friendsSchema = mongoose.Schema({
     }],
     userId: {
         type: mongoose.Schema.Types.ObjectId,
+        unique: true,
         required: true,
         ref: 'User'
     }

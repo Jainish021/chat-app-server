@@ -3,6 +3,7 @@ const multer = require("multer")
 const sharp = require("sharp")
 const User = require("../models/user")
 const Friends = require("../models/friends")
+const Chats = require("../models/chats")
 const auth = require("../middleware/auth")
 const { sendWelcomeEmail, sendCancellationEmail } = require("../emails/account")
 const router = new express.Router()
@@ -112,10 +113,21 @@ router.patch("/users/me", auth, async (req, res) => {
 })
 
 router.delete('/users/me', auth, async (req, res) => {
+    const userId = req.user._id.toString()
     try {
-        await Task.deleteMany({ owner: req.user._id })
+        const friendList = await Friends.findOne({ userId: req.user._id.toString() })
+        const idsToUpdate = friendList.friends.map(doc => doc.friend)
+        const chatIds = friendList.friends.map(doc => doc.friend < userId ? doc.friend + userId : userId + doc.friend)
+
+        await Friends.updateMany(
+            { "userId": { $in: idsToUpdate } },
+            { $pull: { "friends": { "friend": userId } } },
+        )
+
+        await Friends.deleteOne({ "userId": userId })
+        await Chats.deleteMany({ "chatId": { $in: chatIds } })
         await req.user.deleteOne()
-        sendCancellationEmail(req.user.email, req.user.name)
+        sendCancellationEmail(req.user.email, req.user.username)
         res.send(req.user)
     } catch (e) {
         res.status(500).send()
@@ -162,7 +174,6 @@ router.get("/users/:id/avatar", async (req, res) => {
             throw new Error()
         }
 
-        // res.set("Content-Type", "image/png")
         res.send(user.avatar.toString('base64'))
     } catch (e) {
         res.status(404).send()
