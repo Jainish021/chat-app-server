@@ -14,18 +14,7 @@ app.use(userRouter)
 app.use(friendsRouter)
 app.use(chatsRouter)
 
-if (process.env.NODE_ENV !== "production") {
-    app.use(cors({ origin: 'http://localhost:3000' }))
-}
-
-app.use(express.static(path.join(__dirname, "../public")))
-
-// if (process.env.NODE_ENV === "production") {
-//     app.use(express.static(path.resolve(__dirname, "../client/build")))
-//     app.get('*', (req, res) => {
-//         res.sendFile(path.resolve(__dirname, "../client/build/index.js"))
-//     })
-// }
+app.use(cors({ origin: process.env.ORIGIN }))
 
 const server = http.createServer(app)
 
