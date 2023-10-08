@@ -92,7 +92,7 @@ router.get('/friends', auth, async (req, res) => {
             return
         }
 
-        const friendUsers = await User.find({ _id: { $in: friendIds[0].friendIds } }).select('-password -tokens -createdAt -updatedAt -__v')
+        const friendUsers = await User.find({ _id: { $in: friendIds[0].friendIds } }).select('-password -tokens -updatedAt -__v')
         res.status(200).send(friendUsers)
 
     } catch (e) {
