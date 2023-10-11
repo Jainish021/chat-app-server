@@ -1,5 +1,5 @@
 # Howdy
-> Link to the application: https://howdy.up.railway.app/<br>
+> Link to the application: https://howdy-jainish.vercel.app/<br>
 > Client Github repo: https://github.com/Jainish021/chat-app-client<br>
 
 ![Screenshot of login page](https://github.com/Jainish021/images/blob/main/chat-app-login.png)

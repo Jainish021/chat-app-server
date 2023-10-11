@@ -15,7 +15,7 @@ router.post('/friends/addFriend', auth, async (req, res) => {
     } else {
         chatId = req.user._id.toString() + friendId
     }
-
+    const ids = [req.user._id.toString(), friendId]
     const chat = new Chats({ chatId: chatId })
 
     try {
@@ -26,9 +26,20 @@ router.post('/friends/addFriend', auth, async (req, res) => {
             return
         }
 
-        const friendList = await Friends.findOne({ userId: req.user._id.toString() })
-        friendList.friends = friendList.friends.concat({ friend: friendId })
-        await friendList.save()
+        const friendLists = await Friends.find({ userId: { $in: ids } })
+        // console.log(friendLists)
+
+        // for (let i = 0; i < friendLists.length; i++) {
+        //     friendLists[i].friends = friendLists[i].friends.concat({ friend: ids[1 - i] })
+        //     // console.log(friendLists[i].friends)
+        // }
+        const bulkUpdateOperations = friendLists.map((friendList, index) => ({
+            updateOne: {
+                filter: { userId: ids[index] },
+                update: { $push: { friends: { friend: ids[1 - index] } } },
+            },
+        }))
+        await Friends.bulkWrite(bulkUpdateOperations)
         await chat.save()
 
         res.status(200).send({ error: "User added successfully" })
