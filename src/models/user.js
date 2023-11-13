@@ -41,7 +41,14 @@ const userSchema = mongoose.Schema({
     }],
     avatar: {
         type: Buffer
+    },
+    temporaryPassword: {
+        type: String
+    },
+    temporaryPasswordExpiration: {
+        type: Date
     }
+
 }, {
     timestamps: true
 })

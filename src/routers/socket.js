@@ -44,14 +44,15 @@
 const setupSocketIO = (io) => {
     io.on('connection', (socket) => {
         console.log(`A client connected: ${socket.id}`)
+        // socket.emit('connection', 'hello')
+        // console.log('here')
 
         // Add your Socket.io event listeners and logic here
-
         socket.on('message', (data) => {
             console.log(`Received message from client: ${data}`)
 
             // Broadcast the message to all connected clients
-            // io.emit('message', data)
+            socket.emit('message', "Hello")
         })
 
         socket.on('disconnect', () => {

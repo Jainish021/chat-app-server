@@ -27,12 +27,7 @@ router.post('/friends/addFriend', auth, async (req, res) => {
         }
 
         const friendLists = await Friends.find({ userId: { $in: ids } })
-        // console.log(friendLists)
 
-        // for (let i = 0; i < friendLists.length; i++) {
-        //     friendLists[i].friends = friendLists[i].friends.concat({ friend: ids[1 - i] })
-        //     // console.log(friendLists[i].friends)
-        // }
         const bulkUpdateOperations = friendLists.map((friendList, index) => ({
             updateOne: {
                 filter: { userId: ids[index] },

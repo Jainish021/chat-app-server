@@ -1,11 +1,12 @@
 const express = require("express")
 const multer = require("multer")
 const sharp = require("sharp")
+const generator = require('generate-password')
 const User = require("../models/user")
 const Friends = require("../models/friends")
 const Chats = require("../models/chats")
 const auth = require("../middleware/auth")
-const { sendWelcomeEmail, sendCancellationEmail } = require("../emails/account")
+const { sendWelcomeEmail, sendCancellationEmail, sendTemporaryPassword } = require("../emails/account")
 const router = new express.Router()
 
 router.post('/users', async (req, res) => {
@@ -178,6 +179,51 @@ router.get("/users/:id/avatar", async (req, res) => {
     } catch (e) {
         res.status(404).send()
     }
+})
+
+router.post("/users/forgotPassword", async (req, res) => {
+    const oneHourInMilliseconds = 60 * 60 * 1000
+
+    try {
+        const user = await User.findOne({ email: req.body.email })
+        if (!user.temporaryPassword || !user.temporaryPasswordExpiration || !user.temporaryPasswordExpiration > Date.now()) {
+            const password = generator.generate({
+                length: 15,
+                numbers: true,
+                symbols: false,
+                lowercase: true,
+                uppercase: true,
+                strict: true
+            })
+            user.temporaryPassword = password
+            user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
+            await user.save()
+        }
+        sendTemporaryPassword(user.email, user.username, user.temporaryPassword)
+        res.status(200).send({ "success": "Temporary password is sent to the registered email." })
+    } catch (e) {
+        res.status(503).send()
+    }
+})
+
+router.post("/users/changePassword", async (req, res) => {
+    if (req.body.password !== req.body.password2) {
+        res.status(400).send({ error: "Passwords do not match." })
+    } else if (req.body.password.includes(" ")) {
+        res.status(400).send({ error: "Passwords can not contain space." })
+    }
+
+    try {
+        const user = await User.findOne({ email: req.body.email })
+        user.password = req.body.password
+        user.temporaryPassword = null
+        user.temporaryPasswordExpiration = null
+        await user.save()
+        res.status(200).send()
+    } catch (e) {
+        res.status(500).send()
+    }
+
 })
 
 module.exports = router
