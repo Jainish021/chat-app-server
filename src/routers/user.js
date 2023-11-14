@@ -92,7 +92,7 @@ router.post("/users/login", async (req, res) => {
         const user = await User.findByCredentials(req.body.email, req.body.password)
         let verificationCode = ""
         if (!user.verified) {
-            if (user.temporaryPasswordExpiration < Date.now()) {
+            if (!user.temporaryPasswordExpiration || user.temporaryPasswordExpiration < Date.now()) {
                 verificationCode = generateTemporaryPassword()
                 user.temporaryPassword = verificationCode
                 user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
