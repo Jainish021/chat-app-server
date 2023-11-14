@@ -47,8 +47,12 @@ const userSchema = mongoose.Schema({
     },
     temporaryPasswordExpiration: {
         type: Date
+    },
+    verified: {
+        type: Boolean,
+        default: false
     }
-
+    
 }, {
     timestamps: true
 })

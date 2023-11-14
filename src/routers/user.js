@@ -6,8 +6,20 @@ const User = require("../models/user")
 const Friends = require("../models/friends")
 const Chats = require("../models/chats")
 const auth = require("../middleware/auth")
-const { sendWelcomeEmail, sendCancellationEmail, sendTemporaryPassword } = require("../emails/account")
+const { sendWelcomeEmail, sendCancellationEmail, sendTemporaryPassword, sendVerificationCode } = require("../emails/account")
 const router = new express.Router()
+const oneHourInMilliseconds = 60 * 60 * 1000
+
+const generateTemporaryPassword = () => {
+    return generator.generate({
+        length: 15,
+        numbers: true,
+        symbols: false,
+        lowercase: true,
+        uppercase: true,
+        strict: true
+    })
+}
 
 router.post('/users', async (req, res) => {
     const regEx = /[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,8}(.[a-z{2,8}])?/g
@@ -19,18 +31,43 @@ router.post('/users', async (req, res) => {
         res.status(400).send({ error: "Invalid email." })
     }
 
+    const verificationCode = generateTemporaryPassword()
     const { password2, ...userData } = req.body
     const user = new User(userData)
+    user.temporaryPassword = verificationCode
+    user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
     const friends = new Friends({ userId: user._id })
     try {
-        const token = await user.generateAuthToken()
-        user.tokens.token = token
         await user.save()
         await friends.save()
-        sendWelcomeEmail(user.email, user.username)
-        res.status(200).send({ user, token })
+        sendWelcomeEmail(user.email, user.username, verificationCode)
+        res.status(200).send({ user })
     } catch (e) {
         res.status(400).send({ error: "user already regitered" })
+    }
+})
+
+router.post('/users/verification', async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.body.email })
+        if (user.temporaryPassword === req.body.verificationCode && user.temporaryPasswordExpiration > Date.now()) {
+            user.temporaryPassword = null
+            user.temporaryPasswordExpiration = null
+            user.verified = true
+            const token = await user.generateAuthToken()
+            user.tokens.token = token
+            await user.save()
+            res.status(200).send({ verified: true, token: token })
+        } else {
+            const verificationCode = generateTemporaryPassword()
+            user.temporaryPassword = verificationCode
+            user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
+            await user.save()
+            sendVerificationCode(user.email, user.username, verificationCode)
+            res.status(200).send({ verified: false })
+        }
+    } catch (e) {
+        res.status(500).send()
     }
 })
 
@@ -53,8 +90,22 @@ router.post('/users/username', async (req, res) => {
 router.post("/users/login", async (req, res) => {
     try {
         const user = await User.findByCredentials(req.body.email, req.body.password)
-        const token = await user.generateAuthToken()
-        res.send({ user, token })
+        let verificationCode = ""
+        if (!user.verified) {
+            if (user.temporaryPasswordExpiration < Date.now()) {
+                verificationCode = generateTemporaryPassword()
+                user.temporaryPassword = verificationCode
+                user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
+                await user.save()
+            } else {
+                verificationCode = user.temporaryPassword
+            }
+            sendVerificationCode(user.email, user.username, verificationCode)
+            res.status(200).send({ user })
+        } else {
+            const token = await user.generateAuthToken()
+            res.status(200).send({ user, token })
+        }
     } catch (e) {
         res.status(400).send()
     }
@@ -182,19 +233,10 @@ router.get("/users/:id/avatar", async (req, res) => {
 })
 
 router.post("/users/forgotPassword", async (req, res) => {
-    const oneHourInMilliseconds = 60 * 60 * 1000
-
     try {
         const user = await User.findOne({ email: req.body.email })
         if (!user.temporaryPassword || !user.temporaryPasswordExpiration || !user.temporaryPasswordExpiration > Date.now()) {
-            const password = generator.generate({
-                length: 15,
-                numbers: true,
-                symbols: false,
-                lowercase: true,
-                uppercase: true,
-                strict: true
-            })
+            const password = generateTemporaryPassword()
             user.temporaryPassword = password
             user.temporaryPasswordExpiration = Date.now() + oneHourInMilliseconds
             await user.save()

@@ -2,12 +2,12 @@ const sgMail = require("@sendgrid/mail")
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
-const sendWelcomeEmail = (email, name) => {
+const sendWelcomeEmail = (email, name, verificationCode) => {
     sgMail.send({
         to: email,
         from: "jainish1999@gmail.com",
-        subject: "Welcome to Howdy",
-        text: `Welcome to the app, ${name}. \n\nI'm glad you joined Howdy. I'm always updating the app to add new features. So, I hope you'll like using it. \n\nFeel free to give me any feedback. \n\nThank you, \nJainish.`
+        subject: "Welcome to Howdy. Verify account.",
+        text: `Welcome to the app, ${name}. \n\nYour verification code is:${verificationCode} \n\nI'm glad you joined Howdy. I'm always updating the app to add new features. So, I hope you'll like using it. \n\nFeel free to give me any feedback. \n\nThank you, \nJainish.`
     })
 }
 
@@ -29,8 +29,18 @@ const sendTemporaryPassword = (email, name, tempPassword) => {
     })
 }
 
+const sendVerificationCode = (email, name, verificationCode) => {
+    sgMail.send({
+        to: email,
+        from: "jainish1999@gmail.com",
+        subject: "Verify account",
+        text: `Hi ${name}, \n\nHere is your account verification code: ${verificationCode} \nUse it to verify your account. \nNote: It is valid for 1 hour. \n\nThank you, \nJainish.`
+    })
+}
+
 module.exports = {
     sendWelcomeEmail,
     sendCancellationEmail,
-    sendTemporaryPassword
+    sendTemporaryPassword,
+    sendVerificationCode
 }
