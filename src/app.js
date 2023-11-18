@@ -1,5 +1,6 @@
 const express = require("express")
 const http = require("http")
+const cors = require("cors")
 const { Server } = require("socket.io")
 const mongoose = require("./db/mongoose")
 const userRouter = require("./routers/user")
@@ -14,6 +15,7 @@ app.use((req, res, next) => {
     next()
 })
 
+app.use(cors({ origin: process.env.ORIGIN }))
 
 app.use(express.json())
 app.use(userRouter)
