@@ -1,8 +1,7 @@
 const express = require("express")
-const User = require("../models/user")
-const Friends = require("../models/friends")
 const Chats = require('../models/chats')
 const auth = require("../middleware/auth")
+const { sendMessage } = require('../routers/socket')
 const { model, mongo, default: mongoose } = require("mongoose")
 const router = new express.Router()
 
@@ -28,7 +27,8 @@ router.post('/chats/postMessage', auth, async (req, res) => {
     try {
         const chat = await Chats.findOne({ chatId: chatId })
         chat.messages = chat.messages.concat(messageInformation)
-        await chat.save()
+        const savedMessageInformation = await chat.save()
+        sendMessage(receiverId, savedMessageInformation.messages[savedMessageInformation.messages.length - 1])
         res.status(200).send({ success: "Message received" })
     } catch (e) {
         res.status(200).send({ error: "Failed to send the message" })

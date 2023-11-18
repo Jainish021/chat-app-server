@@ -1,64 +1,39 @@
-// import { server } from '../app'
+const { json } = require("express")
+const socketAuth = require("../middleware/socketAuth")
 
-// const io = socketio(server)
-
-// const socketPool = {}
-
-// io.on('connection', (socket) => {
-//     // Attach the custom ID to the socket object
-//     console.log("Listening")
-//     socket.on('message', () => {
-//         console.log("Hello")
-//     })
-//     // socket.customId = customId
-
-//     // // Store the socket in the socket pool
-//     // socketPool[customId] = socket
-
-//     // const pingInterval = setInterval(() => {
-//     //     socket.emit('ping')
-//     // }, 30000)
-
-//     // // Listen for pong responses from the client
-//     // socket.on('pong', () => {
-//     //     console.log(`Received pong from client: ${socket.id}`)
-//     //     // You can add custom logic here if needed
-//     // })
-
-//     // // Handle other socket events, such as messages
-//     // socket.on('message', (data) => {
-//     //     // Your message handling logic here
-//     // })
-
-//     // // Handle client disconnects (whether triggered by the client or automatically)
-//     // socket.on('disconnect', () => {
-//     //     console.log(`Client disconnected: ${socket.id}`)
-//     //     // Clear the ping interval when the client disconnects
-
-//     //     clearInterval(pingInterval)
-//     // })
-// })
-
-
+userIdSocket = {}
 
 const setupSocketIO = (io) => {
-    io.on('connection', (socket) => {
-        console.log(`A client connected: ${socket.id}`)
-        // socket.emit('connection', 'hello')
-        // console.log('here')
+    io.on('connection', async (socket) => {
+        // console.log(`A client connected: ${socket.id}`)
+        const userDetails = {
+            token: socket.handshake.query.token,
+            userId: ''
+        }
 
-        // Add your Socket.io event listeners and logic here
-        socket.on('message', (data) => {
-            console.log(`Received message from client: ${data}`)
+        try {
+            await socketAuth(userDetails)
+            // console.log(userDetails)
+            // console.log(socket)
+            userIdSocket[userDetails.userId] = socket
+            // console.log(userIdSocket)
 
-            // Broadcast the message to all connected clients
-            socket.emit('message', "Hello")
-        })
-
-        socket.on('disconnect', () => {
-            console.log(`A client disconnected: ${socket.id}`)
-        })
+            socket.on('disconnect', () => {
+                // console.log(`A client disconnected: ${socket.id}`)
+                userIdSocket[userDetails.userId] = ''
+            })
+        } catch (error) {
+            // Handle authentication error
+            console.error('Authentication error:', error.message)
+            socket.disconnect(true) // Disconnect the client due to authentication failure
+        }
     })
 }
 
-module.exports = { setupSocketIO }
+const sendMessage = (userId, messageInformation) => {
+    // console.log(userIdSocket[userId])
+    socket = userIdSocket[userId]
+    socket && socket.emit('message', JSON.stringify(messageInformation))
+}
+
+module.exports = { setupSocketIO, sendMessage }
